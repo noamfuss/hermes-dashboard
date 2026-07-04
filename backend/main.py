@@ -70,11 +70,11 @@ def daily_totals(
         SELECT
             date(datetime(started_at, 'unixepoch')) as day,
             COALESCE(model, 'unknown') as model,
-            SUM(input_tokens) AS input_tokens,
-            SUM(output_tokens) AS output_tokens,
-            SUM(cache_read_tokens) AS cache_read_tokens,
-            SUM(cache_write_tokens) AS cache_write_tokens,
-            SUM(input_tokens + output_tokens + cache_read_tokens + cache_write_tokens) AS total_tokens,
+            COALESCE(SUM(COALESCE(input_tokens, 0)), 0) AS input_tokens,
+            COALESCE(SUM(COALESCE(output_tokens, 0)), 0) AS output_tokens,
+            COALESCE(SUM(COALESCE(cache_read_tokens, 0)), 0) AS cache_read_tokens,
+            COALESCE(SUM(COALESCE(cache_write_tokens, 0)), 0) AS cache_write_tokens,
+            COALESCE(SUM(COALESCE(input_tokens, 0) + COALESCE(output_tokens, 0) + COALESCE(cache_read_tokens, 0) + COALESCE(cache_write_tokens, 0)), 0) AS total_tokens,
             COALESCE(SUM(estimated_cost_usd), 0) AS estimated_cost_usd,
             COALESCE(SUM(actual_cost_usd), 0) AS actual_cost_usd,
             COUNT(*) AS session_count

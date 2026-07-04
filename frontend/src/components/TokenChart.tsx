@@ -45,9 +45,15 @@ export function TokenChart({ data, loading, costMode }: Props) {
         return point
       })
 
-    const fmt = costMode
-      ? (v: number) => v < 0.01 ? '$~0' : '$' + v.toFixed(3)
-      : (v: number) => v >= 1_000_000 ? (v / 1_000_000).toFixed(1) + 'M' : v >= 1_000 ? (v / 1_000).toFixed(0) + 'K' : String(v)
+const fmt = costMode
+      ? (v: number) => {
+          if (typeof v !== 'number' || isNaN(v)) return '$0'
+          return v < 0.01 ? '$~0' : '$' + v.toFixed(3)
+        }
+      : (v: number) => {
+          if (typeof v !== 'number' || isNaN(v)) return '0'
+          return v >= 1_000_000 ? (v / 1_000_000).toFixed(1) + 'M' : v >= 1_000 ? (v / 1_000).toFixed(0) + 'K' : String(v)
+        }
 
     return { chartData: chart, models: modelsArr, valueKey: key, valueFmt: fmt }
   }, [data, costMode])
