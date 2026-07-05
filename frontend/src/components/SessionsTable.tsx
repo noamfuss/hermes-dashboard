@@ -31,6 +31,7 @@ export function SessionsTable({ data, total, loading, onPage }: Props) {
               <th className="text-left px-4 py-2 font-medium max-w-[200px]">Title</th>
               <th className="text-right px-4 py-2 font-medium">Input</th>
               <th className="text-right px-4 py-2 font-medium">Output</th>
+              <th className="text-right px-4 py-2 font-medium">Cache</th>
               <th className="text-right px-4 py-2 font-medium">Total</th>
               <th className="text-right px-4 py-2 font-medium">Cost</th>
               <th className="text-center px-4 py-2 font-medium">Source</th>
@@ -68,7 +69,7 @@ export function SessionsTable({ data, total, loading, onPage }: Props) {
             })}
             {data.length === 0 && !loading && (
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-zinc-500 text-sm">No sessions found</td>
+                <td colSpan={9} className="px-4 py-8 text-center text-zinc-500 text-sm">No sessions found</td>
               </tr>
             )}
           </tbody>

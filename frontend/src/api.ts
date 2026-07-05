@@ -64,6 +64,7 @@ export async function fetchSummary(filters: Filters): Promise<Summary> {
   params.set('days', String(filters.days))
   if (filters.startDate) params.set('start_date', filters.startDate)
   if (filters.endDate) params.set('end_date', filters.endDate)
+  if (filters.model) params.set('model', filters.model)
   const res = await fetch(`${API_BASE}/stats/summary?${params}`)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()

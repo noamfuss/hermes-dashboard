@@ -94,6 +94,7 @@ def summary_stats(
     days: int | None = 30,
     start_date: str | None = None,
     end_date: str | None = None,
+    model_filter: str | None = None,
 ) -> dict[str, Any]:
     """Overall summary statistics."""
     clauses: list[str] = []
@@ -111,6 +112,10 @@ def summary_stats(
     if end_date:
         clauses.append("datetime(started_at, 'unixepoch') <= ?")
         params.append(f"{end_date}T23:59:59")
+
+    if model_filter:
+        clauses.append("model = ?")
+        params.append(model_filter)
 
     where = "WHERE " + " AND ".join(clauses) if clauses else ""
 
@@ -237,9 +242,10 @@ def api_summary(
     days: int | None = Query(30, ge=0, description="Number of days to look back. 0 = all time."),
     start_date: str | None = Query(None, description="Start date YYYY-MM-DD (overrides days)"),
     end_date: str | None = Query(None, description="End date YYYY-MM-DD (overrides days end)"),
+    model: str | None = Query(None, description="Filter by model name"),
 ):
     n_days = None if days == 0 else days
-    return summary_stats(db_conn, days=n_days, start_date=start_date, end_date=end_date)
+    return summary_stats(db_conn, days=n_days, start_date=start_date, end_date=end_date, model_filter=model)
 
 
 @app.get("/api/stats/daily")

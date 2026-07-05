@@ -17,7 +17,7 @@ export function SummaryCards({ summary, loading }: { summary: Summary; loading: 
   const cards = [
     { icon: Activity, label: 'Total Sessions', value: fmt(summary.total_sessions), color: 'text-blue-400', bg: 'bg-blue-500/10' },
     { icon: Database, label: 'Total Tokens', value: fmt(summary.total_tokens), color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
-    { icon: FileText, label: 'Input → Output', value: `${fmt(summary.total_input_tokens)} → ${fmt(summary.total_output_tokens)}`, color: 'text-violet-400', bg: 'bg-violet-500/10' },
+    { icon: FileText, label: 'Input · Output · Cache', value: `${fmt(summary.total_input_tokens)} · ${fmt(summary.total_output_tokens)} · ${fmt(summary.total_cache_read_tokens)}`, color: 'text-violet-400', bg: 'bg-violet-500/10' },
     { icon: Coins, label: 'Estimated Cost', value: usd(summary.total_estimated_cost), color: 'text-amber-400', bg: 'bg-amber-500/10' },
   ]
 
