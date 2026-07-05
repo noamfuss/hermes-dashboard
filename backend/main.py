@@ -75,6 +75,7 @@ def daily_totals(
             COALESCE(SUM(COALESCE(cache_read_tokens, 0)), 0) AS cache_read_tokens,
             COALESCE(SUM(COALESCE(cache_write_tokens, 0)), 0) AS cache_write_tokens,
             COALESCE(SUM(COALESCE(input_tokens, 0) + COALESCE(output_tokens, 0) + COALESCE(cache_read_tokens, 0) + COALESCE(cache_write_tokens, 0)), 0) AS total_tokens,
+            COALESCE(SUM(COALESCE(message_count, 0)), 0) AS total_messages,
             COALESCE(SUM(estimated_cost_usd), 0) AS estimated_cost_usd,
             COALESCE(SUM(actual_cost_usd), 0) AS actual_cost_usd,
             COUNT(*) AS session_count
@@ -128,6 +129,7 @@ def summary_stats(
             COALESCE(SUM(cache_read_tokens), 0) AS total_cache_read_tokens,
             COALESCE(SUM(cache_write_tokens), 0) AS total_cache_write_tokens,
             COALESCE(SUM(input_tokens + output_tokens + cache_read_tokens + cache_write_tokens), 0) AS total_tokens,
+            COALESCE(SUM(COALESCE(message_count, 0)), 0) AS total_messages,
             COALESCE(SUM(estimated_cost_usd), 0) AS total_estimated_cost,
             COALESCE(SUM(actual_cost_usd), 0) AS total_actual_cost,
             COUNT(DISTINCT model) AS model_count

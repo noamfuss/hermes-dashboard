@@ -10,6 +10,7 @@ export type DailyRow = {
   total_tokens: number
   estimated_cost_usd: number
   actual_cost_usd: number
+  total_messages: number
   session_count: number
 }
 
@@ -19,6 +20,7 @@ export type Summary = {
   total_output_tokens: number
   total_cache_read_tokens: number
   total_cache_write_tokens: number
+  total_messages: number
   total_tokens: number
   total_estimated_cost: number
   total_actual_cost: number

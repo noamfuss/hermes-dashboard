@@ -1,16 +1,21 @@
 import { useEffect, useState } from 'react'
 import { fetchModels, fetchSummary, fetchDaily, fetchSessions, type Filters, type Summary, type DailyRow, type SessionsResponse } from './api'
 import { SummaryCards } from './components/SummaryCards'
-import { TokenChart } from './components/TokenChart'
+import { TokenChart, type Metric } from './components/TokenChart'
 import { SessionsTable } from './components/SessionsTable'
 import { FilterBar } from './components/FilterBar'
-import { RefreshCw, AlertCircle } from 'lucide-react'
+import { RefreshCw, AlertCircle, MessageSquare, DollarSign, BarChart3 } from 'lucide-react'
 
 const PRESETS = [
   { label: '7d', days: 7 },
   { label: '30d', days: 30 },
   { label: '90d', days: 90 },
   { label: 'All', days: 0 },
+]
+
+const METRIC_TABS: { key: Metric; label: string; icon: typeof BarChart3 }[] = [
+  { key: 'messages', label: 'Messages', icon: MessageSquare },
+  { key: 'cost', label: 'Cost', icon: DollarSign },
 ]
 
 export default function App() {
@@ -22,6 +27,7 @@ export default function App() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [autoRefresh, setAutoRefresh] = useState(true)
+  const [bottomMetric, setBottomMetric] = useState<Metric>('messages')
 
   // Fetch models once
   useEffect(() => {
@@ -134,13 +140,31 @@ export default function App() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-medium text-zinc-300">Daily Token Usage by Model</h2>
           </div>
-          <TokenChart data={daily} loading={loading} />
+          <TokenChart data={daily} loading={loading} metric="tokens" />
         </div>
 
-        {/* Cost chart */}
+        {/* Switchable chart (Messages / Cost) */}
         <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
-          <h2 className="text-sm font-medium text-zinc-300 mb-4">Daily Estimated Cost by Model</h2>
-          <TokenChart data={daily} loading={loading} costMode />
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-medium text-zinc-300">Daily {bottomMetric === 'messages' ? 'Messages' : 'Cost'} by Model</h2>
+            <div className="flex rounded-lg border border-zinc-800 overflow-hidden">
+              {METRIC_TABS.map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setBottomMetric(tab.key)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${
+                    bottomMetric === tab.key
+                      ? 'bg-emerald-500/20 text-emerald-400'
+                      : 'text-zinc-400 hover:bg-zinc-800'
+                  }`}
+                >
+                  <tab.icon className="w-3.5 h-3.5" />
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <TokenChart data={daily} loading={loading} metric={bottomMetric} />
         </div>
 
         {/* Sessions table */}

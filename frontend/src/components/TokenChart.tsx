@@ -4,23 +4,48 @@ import {
 } from 'recharts'
 import type { DailyRow } from '../api'
 
-// Palette — keep consistent across token and cost charts
 const PALETTE = [
   '#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444',
   '#06b6d4', '#ec4899', '#84cc16', '#f97316', '#6366f1',
   '#14b8a6', '#d946ef', '#0ea5e9', '#eab308', '#a855f7',
 ]
 
+export type Metric = 'tokens' | 'messages' | 'cost'
+
 type Props = {
   data: DailyRow[]
   loading: boolean
-  costMode?: boolean
+  metric: Metric
 }
 
-export function TokenChart({ data, loading, costMode }: Props) {
-  const { chartData, models, valueKey, valueFmt } = useMemo(() => {
-    const key = costMode ? 'estimated_cost_usd' : 'total_tokens'
-    // Group by day, one column per model
+const METRIC_CONFIG: Record<Metric, { key: keyof DailyRow; label: string }> = {
+  tokens: { key: 'total_tokens', label: 'Tokens' },
+  messages: { key: 'total_messages', label: 'Messages' },
+  cost: { key: 'estimated_cost_usd', label: 'Cost' },
+}
+
+function fmtTokens(v: number): string {
+  if (typeof v !== 'number' || isNaN(v)) return '0'
+  return v >= 1_000_000 ? (v / 1_000_000).toFixed(1) + 'M'
+    : v >= 1_000 ? (v / 1_000).toFixed(0) + 'K'
+    : String(v)
+}
+
+function fmtCost(v: number): string {
+  if (typeof v !== 'number' || isNaN(v)) return '$0'
+  return v < 0.01 ? '$~0' : '$' + v.toFixed(3)
+}
+
+function fmtMessages(v: number): string {
+  if (typeof v !== 'number' || isNaN(v)) return '0'
+  return String(v)
+}
+
+export function TokenChart({ data, loading, metric }: Props) {
+  const { chartData, models, fmt } = useMemo(() => {
+    const cfg = METRIC_CONFIG[metric]
+    const valueKey = cfg.key
+
     const byDay = new Map<string, Record<string, number>>()
     const modelSet = new Set<string>()
 
@@ -28,7 +53,7 @@ export function TokenChart({ data, loading, costMode }: Props) {
       modelSet.add(row.model)
       const day = row.day
       if (!byDay.has(day)) byDay.set(day, {})
-      byDay.get(day)![row.model] = (byDay.get(day)![row.model] ?? 0) + (row as any)[key]
+      byDay.get(day)![row.model] = (byDay.get(day)![row.model] ?? 0) + (row[valueKey] as number)
     }
 
     const modelsArr = Array.from(modelSet).sort()
@@ -45,18 +70,17 @@ export function TokenChart({ data, loading, costMode }: Props) {
         return point
       })
 
-const fmt = costMode
-      ? (v: number) => {
-          if (typeof v !== 'number' || isNaN(v)) return '$0'
-          return v < 0.01 ? '$~0' : '$' + v.toFixed(3)
-        }
-      : (v: number) => {
-          if (typeof v !== 'number' || isNaN(v)) return '0'
-          return v >= 1_000_000 ? (v / 1_000_000).toFixed(1) + 'M' : v >= 1_000 ? (v / 1_000).toFixed(0) + 'K' : String(v)
-        }
+    let fmt: (v: number) => string
+    if (metric === 'cost') {
+      fmt = fmtCost
+    } else if (metric === 'messages') {
+      fmt = fmtMessages
+    } else {
+      fmt = fmtTokens
+    }
 
-    return { chartData: chart, models: modelsArr, valueKey: key, valueFmt: fmt }
-  }, [data, costMode])
+    return { chartData: chart, models: modelsArr, fmt }
+  }, [data, metric])
 
   if (loading && data.length === 0) {
     return <div className="flex items-center justify-center h-64 text-zinc-500 text-sm">Loading...</div>
@@ -77,7 +101,7 @@ const fmt = costMode
             axisLine={{ stroke: '#27272a' }}
             tickLine={false}
             tickFormatter={(d: string) => {
-              const [y, m, day] = d.split('-')
+              const [, m, day] = d.split('-')
               return `${m}/${day}`
             }}
           />
@@ -85,7 +109,7 @@ const fmt = costMode
             tick={{ fill: '#a1a1aa', fontSize: 12 }}
             axisLine={{ stroke: '#27272a' }}
             tickLine={false}
-            tickFormatter={(v: number) => valueFmt(v)}
+            tickFormatter={(v: number) => fmt(v)}
             width={60}
           />
           <Tooltip
@@ -96,7 +120,7 @@ const fmt = costMode
               fontSize: '12px',
             }}
             labelStyle={{ color: '#d4d4d8', fontWeight: 600, marginBottom: 4 }}
-            formatter={(value: number, name: string) => [valueFmt(value), name]}
+            formatter={(value: number, name: string) => [fmt(value), name]}
             labelFormatter={(d: string) => {
               const [y, m, day] = d.split('-')
               return `${y}-${m}-${day}`
