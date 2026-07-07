@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { fetchModels, fetchSummary, fetchDaily, fetchSessions, type Filters, type Summary, type DailyRow, type SessionsResponse } from './api'
 import { SummaryCards } from './components/SummaryCards'
-import { TokenChart, type Metric } from './components/TokenChart'
+import { TokenChart, type Metric, type ViewMode } from './components/TokenChart'
 import { SessionsTable } from './components/SessionsTable'
 import { FilterBar } from './components/FilterBar'
-import { RefreshCw, AlertCircle, MessageSquare, DollarSign, BarChart3 } from 'lucide-react'
+import { RefreshCw, AlertCircle, MessageSquare, DollarSign, BarChart3, Layers } from 'lucide-react'
 
 const PRESETS = [
   { label: '7d', days: 7 },
@@ -18,6 +18,11 @@ const METRIC_TABS: { key: Metric; label: string; icon: typeof BarChart3 }[] = [
   { key: 'cost', label: 'Cost', icon: DollarSign },
 ]
 
+const TOP_VIEWS: { key: ViewMode; label: string }[] = [
+  { key: 'per-model', label: 'By Model' },
+  { key: 'composition', label: 'Composition' },
+]
+
 export default function App() {
   const [filters, setFilters] = useState<Filters>({ days: 30 })
   const [models, setModels] = useState<string[]>([])
@@ -28,6 +33,7 @@ export default function App() {
   const [error, setError] = useState<string | null>(null)
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [bottomMetric, setBottomMetric] = useState<Metric>('messages')
+  const [topView, setTopView] = useState<ViewMode>('per-model')
 
   // Fetch models once
   useEffect(() => {
@@ -135,12 +141,30 @@ export default function App() {
         {/* Summary cards */}
         {summary && <SummaryCards summary={summary} loading={loading} />}
 
-        {/* Token chart */}
+        {/* Token chart — switchable between per-model and composition */}
         <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-medium text-zinc-300">Daily Token Usage by Model</h2>
+            <h2 className="text-sm font-medium text-zinc-300">
+              {topView === 'composition' ? 'Daily Token Composition' : 'Daily Token Usage by Model'}
+            </h2>
+            <div className="flex rounded-lg border border-zinc-800 overflow-hidden">
+              {TOP_VIEWS.map((v) => (
+                <button
+                  key={v.key}
+                  onClick={() => setTopView(v.key)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${
+                    topView === v.key
+                      ? 'bg-emerald-500/20 text-emerald-400'
+                      : 'text-zinc-400 hover:bg-zinc-800'
+                  }`}
+                >
+                  {v.key === 'composition' && <Layers className="w-3.5 h-3.5" />}
+                  {v.label}
+                </button>
+              ))}
+            </div>
           </div>
-          <TokenChart data={daily} loading={loading} metric="tokens" />
+          <TokenChart data={daily} loading={loading} metric="tokens" view={topView} />
         </div>
 
         {/* Switchable chart (Messages / Cost) */}
