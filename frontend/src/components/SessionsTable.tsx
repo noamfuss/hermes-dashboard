@@ -54,7 +54,8 @@ export function SessionsTable({ data, total, loading, onPage }: Props) {
                   </td>
                   <td className="px-4 py-2.5 text-right text-zinc-300 font-mono text-xs">{fmt(row.input_tokens)}</td>
                   <td className="px-4 py-2.5 text-right text-zinc-300 font-mono text-xs">{fmt(row.output_tokens)}</td>
-                  <td className="px-4 py-2.5 text-right text-emerald-400 font-mono text-xs font-medium">{fmt(tokens)}</td>
+                  <td className="px-4 py-2.5 text-right text-emerald-400 font-mono text-xs font-medium">{fmt(row.cache_read_tokens)}</td>
+                  <td className="px-4 py-2.5 text-right text-zinc-100 font-mono text-xs font-semibold">{fmt(tokens)}</td>
                   <td className="px-4 py-2.5 text-right text-amber-400 font-mono text-xs">
                     {usd(row.estimated_cost_usd)}
                     {row.cost_status === 'actual' && (
