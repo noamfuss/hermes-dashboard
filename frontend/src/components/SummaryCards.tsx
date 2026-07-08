@@ -1,5 +1,5 @@
 import type { Summary } from '../api'
-import { Database, Coins, FileText, Activity, MessageSquare } from 'lucide-react'
+import { Database, Coins, FileText, Activity, MessageSquare, Zap } from 'lucide-react'
 
 function fmt(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(2) + 'M'
@@ -13,17 +13,22 @@ function usd(n: number): string {
   return '$' + n.toFixed(2)
 }
 
+function pct(n: number): string {
+  return (n * 100).toFixed(1) + '%'
+}
+
 export function SummaryCards({ summary, loading }: { summary: Summary; loading: boolean }) {
   const cards = [
     { icon: Activity, label: 'Total Sessions', value: fmt(summary.total_sessions), color: 'text-blue-400', bg: 'bg-blue-500/10' },
     { icon: Database, label: 'Total Tokens', value: fmt(summary.total_tokens), color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
     { icon: MessageSquare, label: 'Total Messages', value: fmt(summary.total_messages), color: 'text-sky-400', bg: 'bg-sky-500/10' },
+    { icon: Zap, label: 'Cache Hit Ratio', value: pct(summary.cache_hit_ratio), color: 'text-cyan-400', bg: 'bg-cyan-500/10' },
     { icon: FileText, label: 'Input · Output · Cache', value: `${fmt(summary.total_input_tokens)} · ${fmt(summary.total_output_tokens)} · ${fmt(summary.total_cache_read_tokens)}`, color: 'text-violet-400', bg: 'bg-violet-500/10' },
     { icon: Coins, label: 'Estimated Cost', value: usd(summary.total_estimated_cost), color: 'text-amber-400', bg: 'bg-amber-500/10' },
   ]
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
       {cards.map((card) => (
         <div key={card.label} className={`rounded-xl border border-zinc-800 ${card.bg} p-4 transition-opacity ${loading ? 'opacity-50' : ''}`}>
           <div className="flex items-center gap-2 mb-2">

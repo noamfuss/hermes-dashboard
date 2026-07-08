@@ -87,7 +87,14 @@ def daily_totals(
         params,
     ).fetchall()
 
-    return [dict(r) for r in rows]
+    result = [dict(r) for r in rows]
+    # Compute per-day cache hit ratio per model
+    for r in result:
+        inp = r.get("input_tokens", 0) or 0
+        cache = r.get("cache_read_tokens", 0) or 0
+        denom = inp + cache
+        r["cache_hit_ratio"] = round(cache / denom, 4) if denom > 0 else 0.0
+    return result
 
 
 def summary_stats(
@@ -139,7 +146,13 @@ def summary_stats(
         params,
     ).fetchone()
 
-    return dict(row) if row else {}
+    result = dict(row) if row else {}
+    # Compute cache hit ratio: cache_read / (input + cache_read)
+    inp = result.get("total_input_tokens", 0) or 0
+    cache = result.get("total_cache_read_tokens", 0) or 0
+    denom = inp + cache
+    result["cache_hit_ratio"] = round(cache / denom, 4) if denom > 0 else 0.0
+    return result
 
 
 def models_list(conn: sqlite3.Connection) -> list[str]:

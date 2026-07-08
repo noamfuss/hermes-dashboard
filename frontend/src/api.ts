@@ -12,6 +12,7 @@ export type DailyRow = {
   actual_cost_usd: number
   total_messages: number
   session_count: number
+  cache_hit_ratio: number
 }
 
 export type Summary = {
@@ -25,6 +26,7 @@ export type Summary = {
   total_estimated_cost: number
   total_actual_cost: number
   model_count: number
+  cache_hit_ratio: number
 }
 
 export type SessionRow = {
