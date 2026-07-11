@@ -1,0 +1,32 @@
+services:
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: hermes-token-dashboard:latest
+    container_name: hermes-token-dashboard
+    #ports:
+    #  - "8100:8100"
+    volumes:
+      # Mount the host Hermes state DB read-only.
+      # Override the host path with: HERMES_HOST_DIR=/path/to/data docker compose up
+      - ${HERMES_HOST_DIR:-~/.hermes}:/data:ro
+    environment:
+      - HERMES_HOME=/data
+      - STATIC_DIR=/app/static
+    restart: unless-stopped
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.${APP}.entrypoints=websecure"
+      - "traefik.http.routers.${APP}.rule=Host(`${APP}.${DOMAIN}`)"
+      - "traefik.http.routers.${APP}.tls.certresolver=staging"
+      - "traefik.http.services.${APP}.loadbalancer.server.scheme=http"
+      - "traefik.http.routers.${APP}.tls.domains[0].main=${DOMAIN}"
+      - "traefik.http.routers.${APP}.tls.domains[0].sans=*.${DOMAIN}"
+
+networks:
+  proxy:
+    name: traefik
+    external: true

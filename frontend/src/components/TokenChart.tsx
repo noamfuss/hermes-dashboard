@@ -150,9 +150,10 @@ export function TokenChart({ data, loading, metric, view = 'per-model' }: Props)
                 fontSize: '12px',
               }}
               labelStyle={{ color: '#d4d4d8', fontWeight: 600, marginBottom: 4 }}
-              formatter={(value: number, name: string) => [fmt(value), name]}
-              labelFormatter={(d: string) => {
-                const [y, m, day] = d.split('-')
+              formatter={(value, name) => [fmt(Number(value)), String(name)]}
+              labelFormatter={(d) => {
+                const s = String(d)
+                const [y, m, day] = s.split('-')
                 return `${y}-${m}-${day}`
               }}
             />
@@ -201,9 +202,10 @@ export function TokenChart({ data, loading, metric, view = 'per-model' }: Props)
                 fontSize: '12px',
               }}
               labelStyle={{ color: '#d4d4d8', fontWeight: 600, marginBottom: 4 }}
-              formatter={(value: number, name: string) => [fmt(value), name]}
-              labelFormatter={(d: string) => {
-                const [y, m, day] = d.split('-')
+              formatter={(value, name) => [fmt(Number(value)), String(name)]}
+              labelFormatter={(d) => {
+                const s = String(d)
+                const [y, m, day] = s.split('-')
                 return `${y}-${m}-${day}`
               }}
             />

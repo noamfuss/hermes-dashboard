@@ -15,6 +15,7 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 
 # ── Config ────────────────────────────────────────────────────────────────
 HERMES_HOME = Path(os.environ.get("HERMES_HOME", "/opt/data"))
@@ -301,6 +302,26 @@ def health():
     return {"status": "ok", "state_db": str(STATE_DB)}
 
 
+# ── Static frontend (registered after all /api routes) ────────────────────
+STATIC_DIR = Path(os.environ.get("STATIC_DIR", "/app/static"))
+
+
+@app.get("/{full_path:path}")
+async def serve_frontend(full_path: str):
+    """Serve the built SPA.
+
+    FastAPI matches explicit /api routes first, so this catch-all only fires
+    for non-API paths: existing files are served directly, everything else
+    falls back to index.html (SPA behavior).
+    """
+    if full_path.startswith("api/"):
+        raise HTTPException(status_code=404, detail="Not found")
+    candidate = STATIC_DIR / full_path
+    if candidate.is_file():
+        return FileResponse(candidate)
+    return FileResponse(STATIC_DIR / "index.html")
+
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8100, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8100, reload=False)
