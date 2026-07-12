@@ -32,6 +32,7 @@ export default function App() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [autoRefresh, setAutoRefresh] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [bottomMetric, setBottomMetric] = useState<Metric>('messages')
   const [topView, setTopView] = useState<ViewMode>('per-model')
 
@@ -44,6 +45,7 @@ export default function App() {
   useEffect(() => {
     let cancelled = false
     setLoading(true)
+    setRefreshing(true)
     setError(null)
 
     Promise.all([
@@ -62,7 +64,7 @@ export default function App() {
         setError(err instanceof Error ? err.message : 'Failed to load data')
       })
       .finally(() => {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) { setLoading(false); setRefreshing(false) }
       })
 
     return () => { cancelled = true }
@@ -72,8 +74,13 @@ export default function App() {
   useEffect(() => {
     if (!autoRefresh) return
     const interval = setInterval(() => {
-      fetchSummary(filters).then(setSummary).catch(() => {})
-      fetchDaily(filters).then(setDaily).catch(() => {})
+      setRefreshing(true)
+      Promise.all([
+        fetchSummary(filters).then(setSummary),
+        fetchDaily(filters).then(setDaily),
+      ])
+        .catch(() => {})
+        .finally(() => setRefreshing(false))
     }, 30000)
     return () => clearInterval(interval)
   }, [filters, autoRefresh])
@@ -116,7 +123,7 @@ export default function App() {
               }`}
               title="Auto-refresh (30s)"
             >
-              <RefreshCw className={`w-4 h-4 ${autoRefresh ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>
