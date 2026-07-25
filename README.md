@@ -115,15 +115,3 @@ Interactive docs (Swagger) are available at `/docs` when running the backend.
 - **Read-only, point-in-time view.** The dashboard never writes to `state.db`.
   It reflects whatever is currently committed in the host database; in-flight
   or unsaved session state is not visible until Hermes persists it.
-- **Cache hit ratio definition.** Ratio is `cache_read_tokens / (input_tokens +
-  cache_read_tokens)`. It is a proxy for prompt-cache reuse, not a provider-side
-  billing metric.
-- **Single host database.** One `HERMES_HOME` is mounted per container. To view
-  a different Hermes profile or machine, restart the container with a different
-  mount / `HERMES_HOST_DIR`.
-- **Traefik assumed for production.** `compose.yaml` ships with Traefik labels
-  and an external `proxy` network; running it without Traefik requires editing
-  the ports/labels.
-- **Auto-refresh is client-side only.** The 30s poll re-fetches summary/daily
-  data but does not push; a session that ends between polls appears on the next
-  cycle.
