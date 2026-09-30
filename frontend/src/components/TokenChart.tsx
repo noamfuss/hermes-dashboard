@@ -36,7 +36,12 @@ function fmtTokens(v: number): string {
 
 function fmtCost(v: number): string {
   if (typeof v !== 'number' || isNaN(v)) return '$0'
-  return v < 0.01 ? '$~0' : '$' + v.toFixed(3)
+  if (v === 0) return '$0'
+  if (v < 0.01) {
+    const amount = v.toFixed(4)
+    return amount === '0.0000' ? '<$0.0001' : '$' + amount
+  }
+  return '$' + v.toFixed(3)
 }
 
 function fmtMessages(v: number): string {

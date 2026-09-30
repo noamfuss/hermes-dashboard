@@ -8,13 +8,15 @@ function fmt(n: number): string {
 }
 
 function usd(n: number): string {
+  if (n === 0) return '$0.00'
+  if (n < 0.00005) return '<$0.0001'
   if (n < 0.01) return '$' + n.toFixed(4)
   if (n < 1) return '$' + n.toFixed(3)
   return '$' + n.toFixed(2)
 }
 
 function pct(n: number): string {
-  return (n * 100).toFixed(1) + '%'
+  return (n * 100).toFixed(2) + '%'
 }
 
 export function SummaryCards({ summary, loading }: { summary: Summary; loading: boolean }) {

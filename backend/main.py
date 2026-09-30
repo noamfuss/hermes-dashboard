@@ -10,8 +10,10 @@ import os
 import sqlite3
 from contextlib import asynccontextmanager
 from datetime import date, datetime, timedelta, timezone
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -31,6 +33,80 @@ def get_db() -> sqlite3.Connection:
     conn = sqlite3.connect(f"file:{STATE_DB}?mode=ro", uri=True, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     return conn
+
+
+# OpenCode Zen's published per-million-token rates for paid models present in
+# this database. Unknown models/routes stay unknown rather than getting a guess.
+_OPENCODE_ZEN_RATES = {
+    "gpt-6-luna": (Decimal("0.10"), Decimal("0.50"), Decimal("0.01"), Decimal("0.125")),
+    "gpt-5.6-luna": (Decimal("0.20"), Decimal("1.20"), Decimal("0.02"), Decimal("0.25")),
+}
+_ONE_MILLION = Decimal("1000000")
+
+
+def _estimate_opencode_zen_cost(row: dict[str, Any]) -> float | None:
+    """Estimate an unknown OpenCode Zen session using its published token rates.
+
+    Session totals do not retain per-request context sizes, so estimates use
+    the standard (<=272K) rate tier.
+    """
+    if str(row.get("billing_provider") or "").lower() not in {"opencode", "opencode-zen"}:
+        return None
+    base_url = urlparse(str(row.get("billing_base_url") or ""))
+    if base_url.hostname != "opencode.ai" or not base_url.path.startswith("/zen/"):
+        return None
+    cost_status = str(row.get("cost_status") or "unknown").lower()
+    if cost_status not in {"unknown", "estimated"}:
+        return None
+    if (row.get("estimated_cost_usd") or 0) != 0 or (row.get("actual_cost_usd") or 0) != 0:
+        return None
+
+    model = str(row.get("model") or "").lower().rsplit("/", 1)[-1]
+    rates = _OPENCODE_ZEN_RATES.get(model)
+    if rates is None:
+        return None
+    token_fields = ("input_tokens", "output_tokens", "cache_read_tokens", "cache_write_tokens")
+    tokens = [max(0, int(row.get(field) or 0)) for field in token_fields]
+    if not any(tokens):
+        return None
+    amount = sum(Decimal(count) * rate / _ONE_MILLION for count, rate in zip(tokens, rates))
+    return float(amount)
+
+
+def _opencode_estimate_totals(
+    conn: sqlite3.Connection,
+    where: str,
+    params: list[Any],
+    *,
+    by_day: bool = False,
+) -> dict[tuple[str, str], float] | float:
+    """Compute fallback estimates for eligible rows without changing state.db."""
+    scope = f"{where} AND" if where else "WHERE"
+    day_column = ", date(datetime(started_at, 'unixepoch')) AS day" if by_day else ""
+    rows = conn.execute(
+        f"""
+        SELECT model, billing_provider, billing_base_url, cost_status,
+               estimated_cost_usd, actual_cost_usd,
+               input_tokens, output_tokens, cache_read_tokens, cache_write_tokens
+               {day_column}
+        FROM sessions
+        {scope} COALESCE(estimated_cost_usd, 0) = 0
+          AND COALESCE(actual_cost_usd, 0) = 0
+          AND (cost_status IS NULL OR cost_status = 'unknown')
+        """,
+        params,
+    ).fetchall()
+    if not by_day:
+        return sum(_estimate_opencode_zen_cost(dict(row)) or 0.0 for row in rows)
+
+    totals: dict[tuple[str, str], float] = {}
+    for row in rows:
+        data = dict(row)
+        amount = _estimate_opencode_zen_cost(data)
+        if amount is not None:
+            key = (data["day"], data["model"] or "unknown")
+            totals[key] = totals.get(key, 0.0) + amount
+    return totals
 
 
 # ── Query helpers ─────────────────────────────────────────────────────────
@@ -89,11 +165,16 @@ def daily_totals(
     ).fetchall()
 
     result = [dict(r) for r in rows]
-    # Compute per-day cache hit ratio per model
+    # Fill only unknown OpenCode Zen costs from published rates; all other
+    # provider-reported and estimated costs remain unchanged.
+    fallback_costs = _opencode_estimate_totals(conn, where, params, by_day=True)
+    assert isinstance(fallback_costs, dict)
     for r in result:
+        r["estimated_cost_usd"] += fallback_costs.get((r["day"], r["model"]), 0.0)
         inp = r.get("input_tokens", 0) or 0
         cache = r.get("cache_read_tokens", 0) or 0
-        denom = inp + cache
+        cache_write = r.get("cache_write_tokens", 0) or 0
+        denom = inp + cache + cache_write
         r["cache_hit_ratio"] = round(cache / denom, 4) if denom > 0 else 0.0
     return result
 
@@ -148,10 +229,15 @@ def summary_stats(
     ).fetchone()
 
     result = dict(row) if row else {}
-    # Compute cache hit ratio: cache_read / (input + cache_read)
+    fallback_cost = _opencode_estimate_totals(conn, where, params)
+    assert isinstance(fallback_cost, float)
+    result["total_estimated_cost"] += fallback_cost
+    # Input is uncached prompt tokens; cache writes are prompt misses and belong
+    # in the denominator alongside uncached and cache-read tokens.
     inp = result.get("total_input_tokens", 0) or 0
     cache = result.get("total_cache_read_tokens", 0) or 0
-    denom = inp + cache
+    cache_write = result.get("total_cache_write_tokens", 0) or 0
+    denom = inp + cache + cache_write
     result["cache_hit_ratio"] = round(cache / denom, 4) if denom > 0 else 0.0
     return result
 
@@ -204,10 +290,10 @@ def sessions_list(
     rows = conn.execute(
         f"""
         SELECT
-            id, model, title, started_at, ended_at,
+            id, model, title, started_at, ended_at, billing_provider, billing_base_url,
             input_tokens, output_tokens, cache_read_tokens, cache_write_tokens,
             estimated_cost_usd, actual_cost_usd, cost_status, cost_source,
-            billing_provider, message_count, tool_call_count, source
+            message_count, tool_call_count, source
         FROM sessions
         {where}
         ORDER BY started_at DESC
@@ -216,11 +302,19 @@ def sessions_list(
         params + [limit, offset],
     ).fetchall()
 
+    sessions = [dict(r) for r in rows]
+    for session in sessions:
+        estimate = _estimate_opencode_zen_cost(session)
+        if estimate is not None:
+            session["estimated_cost_usd"] = estimate
+            session["cost_status"] = "estimated"
+            session["cost_source"] = "opencode_zen_published_rates"
+
     return {
         "total": total,
         "limit": limit,
         "offset": offset,
-        "sessions": [dict(r) for r in rows],
+        "sessions": sessions,
     }
 
 

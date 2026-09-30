@@ -8,6 +8,7 @@ function fmt(n: number): string {
 
 function usd(n: number | null): string {
   if (n === null || n === 0) return '—'
+  if (n < 0.00005) return '<$0.0001'
   if (n < 0.01) return '$' + n.toFixed(4)
   return '$' + n.toFixed(2)
 }
@@ -57,7 +58,7 @@ export function SessionsTable({ data, total, loading, onPage }: Props) {
                   <td className="px-4 py-2.5 text-right text-emerald-400 font-mono text-xs font-medium">{fmt(row.cache_read_tokens)}</td>
                   <td className="px-4 py-2.5 text-right text-zinc-100 font-mono text-xs font-semibold">{fmt(tokens)}</td>
                   <td className="px-4 py-2.5 text-right text-amber-400 font-mono text-xs">
-                    {usd(row.estimated_cost_usd)}
+                    {usd(row.cost_status === 'actual' ? row.actual_cost_usd : row.estimated_cost_usd)}
                     {row.cost_status === 'actual' && (
                       <span className="text-zinc-600 ml-1 text-[10px]">✓</span>
                     )}

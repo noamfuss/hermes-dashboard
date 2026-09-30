@@ -4,7 +4,7 @@ A self-contained dashboard for monitoring [Hermes](https://hermes-agent.nousrese
 
 ## Features
 
-- **Summary cards** — total sessions, total tokens, total messages, cache-hit ratio, input/output/cache split, and estimated cost for the active range.
+- **Summary cards** — total sessions, total tokens, total messages, cache-hit ratio, input/output/cache split, and estimated cost for the active range. Cache-hit ratio is cache-read tokens divided by all prompt tokens (uncached input + cache reads + cache writes).
 - **Daily token usage by model** — stacked-per-model line chart (or a stacked *composition* area chart showing input / output / cache read breakdown).
 - **Daily messages & cost by model** — switchable secondary chart.
 - **Recent sessions table** — paginated list with date, model, title, input/output/cache/total tokens, cost (✓ marks rows with an actual instead of estimated cost), and the session source.
@@ -109,9 +109,13 @@ Interactive docs (Swagger) are available at `/docs` when running the backend.
   messages or token spend occurred. Long-running sessions therefore show all
   their tokens on the start date, and usage can appear "ahead" of or shifted
   from the wall-clock day the tokens were actually consumed.
-- **Costs are mostly estimates.** `estimated_cost_usd` is derived from token
-  counts and model pricing; only sessions with `cost_status = 'actual'` carry a
-  real billed amount (`actual_cost_usd`). Treat the cost cards as approximate.
+- **Costs are estimates unless a provider reports an actual.** For OpenCode Zen
+  `gpt-6-luna` and `gpt-5.6-luna`, unknown/zero DB costs are estimated from the
+  [published token rates](https://dev.opencode.ai/docs/zen/) (including cache
+  reads and writes) at the standard tier. The
+  DB stores session totals rather than per-request context lengths, so estimates
+  cannot apply OpenCode's larger-context price tier exactly. Unsupported models
+  remain unknown; actual billed costs appear only when `cost_status = 'actual'`.
 - **Read-only, point-in-time view.** The dashboard never writes to `state.db`.
   It reflects whatever is currently committed in the host database; in-flight
   or unsaved session state is not visible until Hermes persists it.
